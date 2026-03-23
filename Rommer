@@ -22,9 +22,11 @@ from PyQt5.QtWidgets import (
     QListWidgetItem, QCheckBox, QAbstractItemView, QDateEdit,
     QSpinBox, QTimeEdit, QProgressBar, QScrollArea, QSizePolicy,
     QSplitter, QButtonGroup, QRadioButton, QGroupBox, QTabWidget,
-    QInputDialog
+    QInputDialog, QGraphicsDropShadowEffect
 )
-from PyQt5.QtCore import Qt, pyqtSignal, QDate, QTimer, QTime, QSize
+from PyQt5.QtCore import (Qt, pyqtSignal, QDate, QTimer, QTime, QSize,
+                           QPropertyAnimation, QSequentialAnimationGroup,
+                           QEasingCurve, QPoint)
 from PyQt5.QtGui import QFont, QColor, QPalette, QTextDocument
 from PyQt5.QtPrintSupport import QPrinter
 
@@ -57,22 +59,22 @@ SEXOS      = ["Masculino", "Feminino", "Outro"]
 
 # ── Escuro: fundo profundo alaranjado — igual à landing page ─────────────────
 DARK_THEME = {
-    "BG":         "#0A0600",   # raiz ultra-escuro
-    "BG2":        "#110800",   # sidebar / topbars
-    "CARD":       "#160A00",   # cards
-    "CARD2":      "#1C0E02",   # inputs / células
-    "BORDER":     "#2A1500",
-    "BORDER2":    "#3D2008",
-    "TEXT":       "#F5E6D0",   # creme quente
+    "BG":         "#020100",   # raiz ultra-escuro
+    "BG2":        "#080400",   # sidebar / topbars
+    "CARD":       "#0E0600",   # cards
+    "CARD2":      "#150900",   # inputs / células
+    "BORDER":     "#280F00",
+    "BORDER2":    "#3C1800",
+    "TEXT":       "#FFE8CC",   # creme brilhante
     "TEXT_DIM":   "#3D2510",
-    "TEXT_MID":   "#A07050",
-    "ORANGE":     "#E07828",
-    "ORANGE_DIM": "#A84E08",
-    "ORANGE_GLO": "#FF9040",
+    "TEXT_MID":   "#B07848",
+    "ORANGE":     "#FF8820",
+    "ORANGE_DIM": "#CC5500",
+    "ORANGE_GLO": "#FFB040",
     "SUCCESS":    "#2ECC71",
     "DANGER":     "#E74C3C",
     "WARNING":    "#F39C12",
-    "CYAN":       "#00C2FF",
+    "CYAN":       "#00E5FF",
     "SIDEBAR_W":  "200px",
 }
 
@@ -511,7 +513,7 @@ def build_qss():
 QWidget {{
     background-color: {T('BG')};
     color: {T('TEXT')};
-    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    font-family: "Bahnschrift", "Segoe UI", "Cantarell", "Ubuntu", Arial, sans-serif;
     font-size: 12px;
     border: none;
     outline: none;
@@ -531,13 +533,13 @@ QLineEdit, QTextEdit, QComboBox, QSpinBox, QTimeEdit, QDateEdit {{
 }}
 QLineEdit:focus, QTextEdit:focus, QComboBox:focus,
 QSpinBox:focus, QTimeEdit:focus, QDateEdit:focus {{
-    border-color: {T('ORANGE')};
+    border: 2px solid {T('ORANGE')};
     background-color: {T('CARD')};
 }}
 QComboBox::drop-down {{ border: none; padding-right: 10px; }}
 QComboBox QAbstractItemView {{
     background-color: {T('CARD')};
-    border: 1px solid {T('BORDER2')};
+    border: 1px solid {T('ORANGE')};
     color: {T('TEXT')};
     selection-background-color: {T('ORANGE')};
     selection-color: #000;
@@ -547,33 +549,49 @@ QComboBox QAbstractItemView {{
 
 /* ── BOTÕES PRINCIPAIS ──────────────────────────────────────────────────── */
 QPushButton {{
-    background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
-        stop:0 {T('ORANGE_DIM')}, stop:1 {T('ORANGE')});
-    color: #fff5ec;
-    border: none;
-    border-radius: 7px;
+    background: qlineargradient(x1:0,y1:0,x2:0,y2:1,
+        stop:0 {T('ORANGE_GLO')}, stop:0.45 {T('ORANGE')},
+        stop:0.55 {T('ORANGE')}, stop:1 {T('ORANGE_DIM')});
+    color: #ffffff;
+    border-top: 1px solid {T('ORANGE_GLO')};
+    border-left: 1px solid {T('ORANGE')};
+    border-right: 1px solid {T('ORANGE_DIM')};
+    border-bottom: 2px solid {T('ORANGE_DIM')};
+    border-radius: 8px;
     padding: 10px 22px;
     font-size: 11px;
     font-weight: bold;
-    letter-spacing: 2px;
+    letter-spacing: 3px;
 }}
 QPushButton:hover {{
-    background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
-        stop:0 {T('ORANGE')}, stop:1 {T('ORANGE_GLO')});
+    background: qlineargradient(x1:0,y1:0,x2:0,y2:1,
+        stop:0 #ffffff, stop:0.15 {T('ORANGE_GLO')},
+        stop:0.5 {T('ORANGE_GLO')}, stop:1 {T('ORANGE')});
+    border-top: 1px solid #ffffff;
+    border-left: 1px solid {T('ORANGE_GLO')};
+    border-right: 1px solid {T('ORANGE')};
+    border-bottom: 2px solid {T('ORANGE_DIM')};
+    color: #ffffff;
 }}
-QPushButton:pressed {{ background: {T('ORANGE_DIM')}; }}
-QPushButton:disabled {{ background-color: {T('BORDER2')}; color: {T('TEXT_DIM')}; }}
+QPushButton:pressed {{
+    background: qlineargradient(x1:0,y1:0,x2:0,y2:1,
+        stop:0 {T('ORANGE_DIM')}, stop:1 {T('ORANGE_GLO')});
+    border-top: 1px solid {T('ORANGE_DIM')};
+    border-bottom: 1px solid {T('ORANGE_GLO')};
+    padding-top: 11px; padding-bottom: 9px;
+}}
+QPushButton:disabled {{ background-color: {T('BORDER2')}; border: 1px solid {T('BORDER')}; color: {T('TEXT_DIM')}; }}
 
 QPushButton#btn_ghost {{
     background-color: transparent;
     border: 1px solid {T('BORDER2')};
     color: {T('TEXT_MID')};
-    letter-spacing: 1px;
+    letter-spacing: 2px;
 }}
 QPushButton#btn_ghost:hover {{
-    border-color: {T('ORANGE')};
-    color: {T('ORANGE')};
-    background-color: rgba(224,120,40,0.07);
+    border: 1px solid {T('ORANGE')};
+    color: {T('ORANGE_GLO')};
+    background-color: rgba(255,136,32,0.10);
 }}
 
 QPushButton#btn_link {{
@@ -585,25 +603,25 @@ QPushButton#btn_link {{
     font-size: 11px;
     letter-spacing: 1px;
 }}
-QPushButton#btn_link:hover {{ color: {T('ORANGE')}; }}
+QPushButton#btn_link:hover {{ color: {T('ORANGE_GLO')}; }}
 
 QPushButton#btn_danger {{
     background-color: transparent;
     border: 1px solid {T('DANGER')};
     color: {T('DANGER')};
     font-size: 11px;
-    letter-spacing: 1px;
+    letter-spacing: 2px;
 }}
-QPushButton#btn_danger:hover {{ background-color: {T('DANGER')}; color: white; }}
+QPushButton#btn_danger:hover {{ background-color: {T('DANGER')}; color: white; border: 1px solid #ff8888; }}
 
 QPushButton#btn_success {{
     background-color: transparent;
     border: 1px solid {T('SUCCESS')};
     color: {T('SUCCESS')};
     font-size: 11px;
-    letter-spacing: 1px;
+    letter-spacing: 2px;
 }}
-QPushButton#btn_success:hover {{ background-color: {T('SUCCESS')}; color: #000; }}
+QPushButton#btn_success:hover {{ background-color: {T('SUCCESS')}; color: #000; border: 1px solid #88ffbb; }}
 
 /* ── SIDEBAR ─────────────────────────────────────────────────────────────── */
 QPushButton#btn_sidebar {{
@@ -615,15 +633,17 @@ QPushButton#btn_sidebar {{
     padding: 10px 14px;
     font-size: 11px;
     font-weight: 600;
-    letter-spacing: 1px;
+    letter-spacing: 2px;
 }}
 QPushButton#btn_sidebar:hover {{
-    background-color: rgba(224,120,40,0.08);
+    background-color: rgba(255,136,32,0.10);
     color: {T('TEXT_MID')};
+    border-left: 2px solid {T('BORDER2')};
+    padding-left: 12px;
 }}
 QPushButton#btn_sidebar[active="true"] {{
     background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
-        stop:0 rgba(224,120,40,0.20), stop:1 rgba(224,120,40,0.04));
+        stop:0 rgba(255,136,32,0.22), stop:1 rgba(255,136,32,0.04));
     color: {T('ORANGE_GLO')};
     border-left: 3px solid {T('ORANGE')};
     padding-left: 11px;
@@ -643,17 +663,17 @@ QTableWidget::item {{
     border-bottom: 1px solid {T('BORDER')};
 }}
 QTableWidget::item:selected {{
-    background-color: rgba(224,120,40,0.12);
+    background-color: rgba(255,136,32,0.16);
     color: {T('TEXT')};
 }}
 QHeaderView::section {{
     background-color: {T('CARD')};
-    color: {T('ORANGE_DIM')};
+    color: {T('ORANGE')};
     padding: 10px 14px;
     border: none;
-    border-bottom: 1px solid {T('BORDER2')};
+    border-bottom: 1px solid {T('ORANGE_DIM')};
     font-size: 9px;
-    letter-spacing: 3px;
+    letter-spacing: 4px;
     font-weight: bold;
 }}
 
@@ -687,36 +707,37 @@ QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{ width: 0; }}
 QFrame#sidebar {{
     background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
         stop:0 {T('BG2')}, stop:1 {T('BG')});
-    border-right: 1px solid {T('BORDER')};
+    border-right: 1px solid {T('BORDER2')};
 }}
 QFrame#card {{
     background-color: {T('CARD')};
-    border: 1px solid {T('BORDER')};
+    border: 1px solid {T('BORDER2')};
+    border-top: 1px solid {T('BORDER2')};
     border-radius: 10px;
 }}
 QFrame#divider {{
     background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
-        stop:0 transparent, stop:0.3 {T('BORDER2')},
-        stop:0.7 {T('BORDER2')}, stop:1 transparent);
+        stop:0 transparent, stop:0.3 {T('ORANGE_DIM')},
+        stop:0.7 {T('ORANGE_DIM')}, stop:1 transparent);
     max-height: 1px;
 }}
 QFrame#topbar {{
     background-color: {T('BG2')};
-    border-bottom: 1px solid {T('BORDER')};
+    border-bottom: 1px solid {T('BORDER2')};
 }}
 
 /* ── PROGRESSBAR ─────────────────────────────────────────────────────────── */
 QProgressBar {{
     background-color: {T('CARD2')};
-    border: none;
-    border-radius: 3px;
-    height: 5px;
+    border: 1px solid {T('BORDER2')};
+    border-radius: 4px;
+    height: 6px;
     text-align: center;
 }}
 QProgressBar::chunk {{
     background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
-        stop:0 {T('ORANGE_DIM')}, stop:1 {T('ORANGE_GLO')});
-    border-radius: 3px;
+        stop:0 {T('ORANGE_DIM')}, stop:0.5 {T('ORANGE')}, stop:1 {T('ORANGE_GLO')});
+    border-radius: 4px;
 }}
 
 /* ── CHECKBOX / RADIO ────────────────────────────────────────────────────── */
@@ -729,8 +750,8 @@ QCheckBox::indicator {{
 }}
 QCheckBox::indicator:checked {{
     background: qlineargradient(x1:0,y1:0,x2:1,y2:1,
-        stop:0 {T('ORANGE')}, stop:1 {T('ORANGE_DIM')});
-    border-color: {T('ORANGE')};
+        stop:0 {T('ORANGE_GLO')}, stop:1 {T('ORANGE_DIM')});
+    border-color: {T('ORANGE_GLO')};
 }}
 
 QRadioButton {{ color: {T('TEXT_MID')}; spacing: 8px; }}
@@ -742,8 +763,8 @@ QRadioButton::indicator {{
 }}
 QRadioButton::indicator:checked {{
     background: qlineargradient(x1:0,y1:0,x2:1,y2:1,
-        stop:0 {T('ORANGE')}, stop:1 {T('ORANGE_DIM')});
-    border-color: {T('ORANGE')};
+        stop:0 {T('ORANGE_GLO')}, stop:1 {T('ORANGE_DIM')});
+    border-color: {T('ORANGE_GLO')};
 }}
 
 /* ── DIALOGS / GROUPS ────────────────────────────────────────────────────── */
@@ -752,23 +773,24 @@ QMessageBox QPushButton {{ min-width: 80px; }}
 QDialog {{ background-color: {T('BG2')}; }}
 
 QGroupBox {{
-    border: 1px solid {T('BORDER')};
+    border: 1px solid {T('BORDER2')};
+    border-top: 1px solid {T('ORANGE_DIM')};
     border-radius: 8px;
     margin-top: 14px;
     color: {T('TEXT_MID')};
     font-size: 10px;
-    letter-spacing: 2px;
+    letter-spacing: 3px;
 }}
 QGroupBox::title {{
     subcontrol-origin: margin;
     left: 12px;
     padding: 0 6px;
-    color: {T('TEXT_DIM')};
+    color: {T('ORANGE')};
 }}
 
 /* ── TABS ────────────────────────────────────────────────────────────────── */
 QTabWidget::pane {{
-    border-top: 1px solid {T('BORDER2')};
+    border-top: 1px solid {T('ORANGE_DIM')};
     margin-top: -1px;
     background: {T('BG')};
 }}
@@ -777,19 +799,19 @@ QTabBar::tab {{
     color: {T('TEXT_MID')};
     border: 1px solid {T('BORDER2')};
     border-bottom: none;
-    padding: 8px 16px;
+    padding: 8px 18px;
     margin-right: 3px;
     border-radius: 6px 6px 0 0;
     font-size: 10px;
-    letter-spacing: 1px;
+    letter-spacing: 2px;
 }}
 QTabBar::tab:selected {{
     background: {T('BG')};
-    color: {T('ORANGE')};
+    color: {T('ORANGE_GLO')};
     border-color: {T('ORANGE')};
     border-bottom-color: {T('BG')};
 }}
-QTabBar::tab:hover {{ color: {T('TEXT')}; background: {T('CARD')}; }}
+QTabBar::tab:hover {{ color: {T('TEXT')}; background: {T('CARD')}; border-color: {T('ORANGE_DIM')}; }}
 
 /* ── CALENDÁRIO ──────────────────────────────────────────────────────────── */
 QCalendarWidget QWidget#qt_calendar_navigationbar {{
@@ -806,8 +828,8 @@ QCalendarWidget QToolButton {{
 }}
 QCalendarWidget QToolButton:hover {{
     border-color: {T('ORANGE')};
-    color: {T('ORANGE')};
-    background: rgba(224,120,40,0.08);
+    color: {T('ORANGE_GLO')};
+    background: rgba(255,136,32,0.10);
     border-radius: 5px;
 }}
 QCalendarWidget QSpinBox {{
@@ -821,18 +843,19 @@ QCalendarWidget QSpinBox {{
 QCalendarWidget QAbstractItemView:enabled {{
     color: {T('TEXT')};
     background: {T('BG')};
-    selection-background-color: rgba(224,120,40,0.22);
+    selection-background-color: rgba(255,136,32,0.26);
     selection-color: {T('TEXT')};
 }}
 
 /* ── TOOLTIP ─────────────────────────────────────────────────────────────── */
 QToolTip {{
     background-color: {T('CARD')};
-    color: {T('TEXT')};
+    color: {T('ORANGE_GLO')};
     border: 1px solid {T('ORANGE')};
     border-radius: 5px;
     padding: 5px 10px;
     font-size: 11px;
+    letter-spacing: 1px;
 }}
 
 /* ── SPLITTER ────────────────────────────────────────────────────────────── */
@@ -856,15 +879,69 @@ def card():
     f = QFrame(); f.setObjectName("card"); return f
 
 def mono_label(txt, size=9, color=None):
-    l = QLabel(txt); l.setFont(QFont("Segoe UI", size))
-    if color: l.setStyleSheet(f"color: {color}; background: transparent;")
+    l = QLabel(txt); l.setFont(QFont("Bahnschrift", size))
+    if color: l.setStyleSheet(f"color: {color}; background: transparent; letter-spacing: 1px;")
     return l
 
 def section_label(txt):
     l = QLabel(txt.upper())
-    l.setFont(QFont("Segoe UI", 9, QFont.Bold))
-    l.setStyleSheet(f"color: {T('ORANGE')}; letter-spacing: 3px; background: transparent;")
+    l.setFont(QFont("Bahnschrift", 9, QFont.Bold))
+    l.setStyleSheet(f"color: {T('ORANGE')}; letter-spacing: 4px; background: transparent;")
     return l
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  EFEITOS FUTURÍSTICOS
+# ══════════════════════════════════════════════════════════════════════════════
+
+class GlowButton(QPushButton):
+    """QPushButton com efeito de brilho animado (glow) ao passar o mouse."""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._effect = QGraphicsDropShadowEffect(self)
+        self._effect.setOffset(0, 0)
+        self._effect.setBlurRadius(10)
+        self._effect.setColor(QColor(T('ORANGE')))
+        self.setGraphicsEffect(self._effect)
+
+    def enterEvent(self, event):
+        super().enterEvent(event)
+        self._effect.setColor(QColor(T('ORANGE_GLO')))
+        self._effect.setBlurRadius(28)
+
+    def leaveEvent(self, event):
+        super().leaveEvent(event)
+        self._effect.setColor(QColor(T('ORANGE')))
+        self._effect.setBlurRadius(10)
+
+
+class FloatingIconWidget(QWidget):
+    """Contêiner que anima o widget filho com um suave efeito de flutuação."""
+    def __init__(self, inner_widget, amplitude=5, duration=2200, parent=None):
+        super().__init__(parent)
+        self.inner = inner_widget
+        inner_widget.setParent(self)
+        pad = amplitude + 2
+        inner_widget.move(0, pad)
+        self.setFixedSize(inner_widget.width(), inner_widget.height() + pad * 2)
+
+        up = QPropertyAnimation(inner_widget, b"pos")
+        up.setDuration(duration // 2)
+        up.setStartValue(QPoint(0, pad))
+        up.setEndValue(QPoint(0, pad - amplitude))
+        up.setEasingCurve(QEasingCurve.InOutSine)
+
+        down = QPropertyAnimation(inner_widget, b"pos")
+        down.setDuration(duration // 2)
+        down.setStartValue(QPoint(0, pad - amplitude))
+        down.setEndValue(QPoint(0, pad))
+        down.setEasingCurve(QEasingCurve.InOutSine)
+
+        self._seq = QSequentialAnimationGroup()
+        self._seq.addAnimation(up)
+        self._seq.addAnimation(down)
+        self._seq.setLoopCount(-1)
+        self._seq.start()
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -882,8 +959,8 @@ class BaseDialog(QDialog):
         self._lay.setContentsMargins(28, 28, 28, 28)
 
     def add_title(self, txt):
-        l = QLabel(txt); l.setFont(QFont("Segoe UI", 13, QFont.Bold))
-        l.setStyleSheet(f"color: {T('ORANGE')}; letter-spacing: 3px; background: transparent;")
+        l = QLabel(txt); l.setFont(QFont("Bahnschrift", 13, QFont.Bold))
+        l.setStyleSheet(f"color: {T('ORANGE_GLO')}; letter-spacing: 5px; background: transparent;")
         l.setAlignment(Qt.AlignCenter); self._lay.addWidget(l); self._lay.addWidget(divider())
 
     def add_error(self):
@@ -1360,33 +1437,44 @@ class LoginWidget(QWidget):
         center = QWidget(); center.setFixedWidth(380)
         lay = QVBoxLayout(center); lay.setSpacing(0); lay.setContentsMargins(0,0,0,0)
 
-        # Logo — estética da landing page
+        # Logo — estética futurística com animação flutuante
         logo_area = QVBoxLayout(); logo_area.setSpacing(8); logo_area.setAlignment(Qt.AlignCenter)
-        mark = QLabel("N"); mark.setFont(QFont("Segoe UI", 14, QFont.Bold))
+        mark = QLabel("N"); mark.setFont(QFont("Bahnschrift", 16, QFont.Bold))
         mark.setStyleSheet(
-            f"background: qlineargradient(x1:0,y1:0,x2:1,y2:1,"
-            f"stop:0 {T('ORANGE_DIM')}, stop:1 {T('ORANGE')});"
-            f"color: #fff5ec; border-radius: 12px; padding: 10px 14px;"
+            f"background: qlineargradient(x1:0,y1:0,x2:0,y2:1,"
+            f"stop:0 {T('ORANGE_GLO')}, stop:0.45 {T('ORANGE')},"
+            f"stop:0.55 {T('ORANGE')}, stop:1 {T('ORANGE_DIM')});"
+            f"color: #ffffff;"
+            f"border-top: 1px solid {T('ORANGE_GLO')};"
+            f"border-left: 1px solid {T('ORANGE')};"
+            f"border-right: 1px solid {T('ORANGE_DIM')};"
+            f"border-bottom: 2px solid {T('ORANGE_DIM')};"
+            f"border-radius: 14px; padding: 10px 14px;"
         )
-        mark.setAlignment(Qt.AlignCenter); mark.setFixedSize(56, 56)
+        mark.setAlignment(Qt.AlignCenter); mark.setFixedSize(60, 60)
+        mark_shadow = QGraphicsDropShadowEffect()
+        mark_shadow.setBlurRadius(24); mark_shadow.setOffset(0, 0)
+        mark_shadow.setColor(QColor(T('ORANGE')))
+        mark.setGraphicsEffect(mark_shadow)
+        float_mark = FloatingIconWidget(mark, amplitude=6, duration=2400)
 
-        title = QLabel("NOVAROMA"); title.setFont(QFont("Segoe UI", 18, QFont.Bold))
-        title.setStyleSheet(f"color: {T('ORANGE')}; letter-spacing: 5px; background: transparent;")
+        title = QLabel("NOVAROMA"); title.setFont(QFont("Bahnschrift", 20, QFont.Bold))
+        title.setStyleSheet(f"color: {T('ORANGE_GLO')}; letter-spacing: 6px; background: transparent;")
         title.setAlignment(Qt.AlignCenter)
 
-        sub = QLabel("Sistema de Gestão de Clientes"); sub.setFont(QFont("Segoe UI", 9))
-        sub.setStyleSheet(f"color: {T('TEXT_DIM')}; letter-spacing: 2px; background: transparent;")
+        sub = QLabel("Sistema de Gestão de Clientes"); sub.setFont(QFont("Bahnschrift", 9))
+        sub.setStyleSheet(f"color: {T('TEXT_MID')}; letter-spacing: 3px; background: transparent;")
         sub.setAlignment(Qt.AlignCenter)
 
-        # Glow label abaixo do logo
+        # Linha de brilho abaixo do logo
         glow_line = QFrame()
         glow_line.setFixedHeight(1)
         glow_line.setStyleSheet(
             f"background: qlineargradient(x1:0,y1:0,x2:1,y2:0,"
-            f"stop:0 transparent, stop:0.5 {T('ORANGE')}, stop:1 transparent);"
+            f"stop:0 transparent, stop:0.5 {T('ORANGE_GLO')}, stop:1 transparent);"
         )
 
-        logo_area.addWidget(mark, alignment=Qt.AlignCenter)
+        logo_area.addWidget(float_mark, alignment=Qt.AlignCenter)
         logo_area.addWidget(title)
         logo_area.addWidget(sub)
         lay.addLayout(logo_area)
@@ -1401,6 +1489,7 @@ class LoginWidget(QWidget):
             f"  background: qlineargradient(x1:0,y1:0,x2:0,y2:1,"
             f"    stop:0 {T('CARD')}, stop:1 {T('CARD2')});"
             f"  border: 1px solid {T('BORDER2')};"
+            f"  border-top: 1px solid {T('ORANGE_DIM')};"
             f"  border-radius: 12px;"
             f"}}"
         )
@@ -1422,24 +1511,13 @@ class LoginWidget(QWidget):
         self.lbl_err = QLabel(""); self.lbl_err.setStyleSheet(f"color: {T('DANGER')}; font-size: 11px; background: transparent;")
         self.lbl_err.setAlignment(Qt.AlignCenter); cl.addWidget(self.lbl_err)
 
-        self.btn_login = QPushButton("ENTRAR"); self.btn_login.setFixedHeight(46)
-        self.btn_login.setStyleSheet(
-            f"QPushButton {{"
-            f"  background: qlineargradient(x1:0,y1:0,x2:1,y2:0,"
-            f"    stop:0 {T('ORANGE_DIM')}, stop:1 {T('ORANGE')});"
-            f"  color: #fff5ec; border-radius: 8px; font-size: 13px;"
-            f"  font-weight: bold; letter-spacing: 4px;"
-            f"}}"
-            f"QPushButton:hover {{"
-            f"  background: qlineargradient(x1:0,y1:0,x2:1,y2:0,"
-            f"    stop:0 {T('ORANGE')}, stop:1 {T('ORANGE_GLO')});"
-            f"}}"
-        )
+        self.btn_login = GlowButton("ENTRAR"); self.btn_login.setFixedHeight(48)
+        self.btn_login.setStyleSheet("QPushButton { font-size: 14px; letter-spacing: 5px; }")
         self.btn_login.clicked.connect(self._login); cl.addWidget(self.btn_login)
         lay.addWidget(c)
 
         foot = QHBoxLayout(); foot.setAlignment(Qt.AlignCenter)
-        foot.addWidget(mono_label("◆ NOVAROMA SOLUTIONS", 8, T("TEXT_DIM")))
+        foot.addWidget(mono_label("◆ NOVAROMA SOLUTIONS", 8, T("TEXT_MID")))
         lay.addSpacing(16); lay.addLayout(foot)
         root.addWidget(center, alignment=Qt.AlignCenter)
 
@@ -2149,15 +2227,22 @@ class MainWindow(QMainWindow):
 
         # Logo
         logo_row = QHBoxLayout()
-        mark = QLabel("N"); mark.setFont(QFont("Segoe UI", 11, QFont.Bold))
+        mark = QLabel("N"); mark.setFont(QFont("Bahnschrift", 11, QFont.Bold))
         mark.setStyleSheet(
-            f"background: qlineargradient(x1:0,y1:0,x2:1,y2:1,"
-            f"stop:0 {T('ORANGE_DIM')}, stop:1 {T('ORANGE')});"
-            f"color: #fff5ec; border-radius: 6px; padding: 4px 8px;"
+            f"background: qlineargradient(x1:0,y1:0,x2:0,y2:1,"
+            f"stop:0 {T('ORANGE_GLO')}, stop:0.5 {T('ORANGE')}, stop:1 {T('ORANGE_DIM')});"
+            f"color: #ffffff;"
+            f"border-top: 1px solid {T('ORANGE_GLO')};"
+            f"border-bottom: 1px solid {T('ORANGE_DIM')};"
+            f"border-radius: 6px; padding: 4px 8px;"
         )
         mark.setFixedSize(28, 28); mark.setAlignment(Qt.AlignCenter)
-        logo_txt = QLabel("NOVAROMA"); logo_txt.setFont(QFont("Segoe UI", 11, QFont.Bold))
-        logo_txt.setStyleSheet(f"color: {T('ORANGE')}; letter-spacing: 2px; background: transparent;")
+        mark_shadow = QGraphicsDropShadowEffect()
+        mark_shadow.setBlurRadius(12); mark_shadow.setOffset(0, 0)
+        mark_shadow.setColor(QColor(T('ORANGE')))
+        mark.setGraphicsEffect(mark_shadow)
+        logo_txt = QLabel("NOVAROMA"); logo_txt.setFont(QFont("Bahnschrift", 11, QFont.Bold))
+        logo_txt.setStyleSheet(f"color: {T('ORANGE_GLO')}; letter-spacing: 3px; background: transparent;")
         logo_row.addWidget(mark); logo_row.addWidget(logo_txt); logo_row.addStretch()
         sb.addLayout(logo_row); sb.addSpacing(20); sb.addWidget(divider()); sb.addSpacing(8)
 
