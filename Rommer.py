@@ -8,6 +8,7 @@ import os
 import hashlib
 import json
 import html
+import random
 import threading
 import urllib.request
 import urllib.error
@@ -25,7 +26,7 @@ from PyQt5.QtWidgets import (
     QInputDialog
 )
 from PyQt5.QtCore import Qt, pyqtSignal, QDate, QTimer, QTime, QSize
-from PyQt5.QtGui import QFont, QColor, QPalette, QTextDocument
+from PyQt5.QtGui import QFont, QColor, QPalette, QTextDocument, QPainter, QLinearGradient
 from PyQt5.QtPrintSupport import QPrinter
 
 
@@ -1349,6 +1350,214 @@ class AdminPanel(BaseDialog):
 #  TELA DE LOGIN
 # ══════════════════════════════════════════════════════════════════════════════
 
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  LANDING-PAGE LOGIN PANEL
+# ══════════════════════════════════════════════════════════════════════════════
+
+_FEATURES = [
+    ("👥", "Gestão de Clientes",    "Perfis completos com nome, contato, nascimento e documentos — num painel limpo."),
+    ("💬", "Mensagens Automáticas", "Agende mensagens e envie para todos ou clientes específicos na hora certa."),
+    ("🎂", "Parabéns Automático",   "O sistema lembra o aniversário de cada cliente e envia a mensagem sozinho."),
+    ("🤖", "IA Assistente",         "Converse com a IA no sistema ou no WhatsApp — ela responde por você."),
+    ("📊", "Relatórios Inteligentes","Transforme dados em PDF ou Excel com um clique. Simples e profissional."),
+    ("⚡", "Envio Imediato",        "Clique em 'Enviar na hora' e sua mensagem chega em segundos."),
+]
+
+_BENEFITS = [
+    "Nunca mais esqueça um aniversário ou follow-up",
+    "Reduza tarefas repetitivas em até 80% com automação",
+    "IA que atende seus clientes no WhatsApp por você",
+    "Relatórios prontos para apresentar em segundos",
+    "Escale o atendimento sem contratar mais ninguém",
+]
+
+_PLANS = [
+    ("Quinzenal", "21,97", "a cada 15 dias", False),
+    ("Mensal",    "35,97", "por mês",        True),
+]
+
+
+class _LeftLoginPanel(QFrame):
+    """Landing-page-style left panel: animated particle background,
+    feature cards, benefits list and pricing plans."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._particles = []
+        self._ready = False
+        self._bg_grad = None          # cached background gradient
+        self._timer = QTimer(self)
+        self._timer.timeout.connect(self._step)
+        self._timer.start(33)          # ~30 fps
+
+        lay = QVBoxLayout(self)
+        lay.setSpacing(10)
+        lay.setContentsMargins(36, 28, 36, 24)
+
+        # ── Brand ─────────────────────────────────────────────────────────────
+        brand_row = QHBoxLayout(); brand_row.setSpacing(10)
+        mark = QLabel("N")
+        mark.setFont(QFont("Segoe UI", 13, QFont.Bold))
+        mark.setStyleSheet(
+            "background: qlineargradient(x1:0,y1:0,x2:1,y2:1,"
+            "stop:0 #A84E08,stop:1 #E07828);"
+            "color:#fff5ec; border-radius:8px; padding:4px 8px;"
+        )
+        mark.setFixedSize(34, 34); mark.setAlignment(Qt.AlignCenter)
+        brand_name = QLabel("NOVAROMA")
+        brand_name.setFont(QFont("Segoe UI", 18, QFont.Bold))
+        brand_name.setStyleSheet("color:#FF9040; letter-spacing:4px; background:transparent;")
+        brand_row.addWidget(mark); brand_row.addWidget(brand_name); brand_row.addStretch()
+        lay.addLayout(brand_row)
+
+        tagline = QLabel("Gerencie clientes com inteligência e automação.")
+        tagline.setFont(QFont("Segoe UI", 10))
+        tagline.setStyleSheet("color:#7A5030; letter-spacing:1px; background:transparent;")
+        lay.addWidget(tagline)
+
+        # ── Glow divider ──────────────────────────────────────────────────────
+        gd = QFrame(); gd.setFixedHeight(1)
+        gd.setStyleSheet(
+            "background: qlineargradient(x1:0,y1:0,x2:1,y2:0,"
+            "stop:0 transparent,stop:0.5 #E07828,stop:1 transparent); border:none;"
+        )
+        lay.addWidget(gd)
+        lay.addSpacing(2)
+
+        # ── Features 2-column grid ─────────────────────────────────────────────
+        grid_w = QWidget()
+        grid_w.setStyleSheet("background:transparent;")
+        grid_l = QHBoxLayout(grid_w); grid_l.setSpacing(8); grid_l.setContentsMargins(0, 0, 0, 0)
+        col1 = QVBoxLayout(); col1.setSpacing(6)
+        col2 = QVBoxLayout(); col2.setSpacing(6)
+
+        for i, (ico, title, desc) in enumerate(_FEATURES):
+            fw = QFrame(); fw.setObjectName("feat_card")
+            fw.setStyleSheet(
+                "QFrame#feat_card{"
+                "background:rgba(22,10,0,0.75);"
+                "border:1px solid rgba(61,32,8,0.85);"
+                "border-radius:8px;}"
+            )
+            fl = QVBoxLayout(fw); fl.setSpacing(2); fl.setContentsMargins(9, 7, 9, 7)
+            hrow = QHBoxLayout(); hrow.setSpacing(5)
+            ico_l = QLabel(ico); ico_l.setFont(QFont("Segoe UI", 12))
+            ico_l.setStyleSheet("QLabel{background:transparent;}")
+            ico_l.setFixedWidth(22)
+            t_l = QLabel(title); t_l.setFont(QFont("Segoe UI", 9, QFont.Bold))
+            t_l.setStyleSheet("QLabel{color:#F5E6D0;background:transparent;}")
+            hrow.addWidget(ico_l); hrow.addWidget(t_l); hrow.addStretch()
+            fl.addLayout(hrow)
+            d_l = QLabel(desc); d_l.setFont(QFont("Segoe UI", 8))
+            d_l.setStyleSheet("QLabel{color:#7A5030;background:transparent;}")
+            d_l.setWordWrap(True)
+            fl.addWidget(d_l)
+            (col1 if i % 2 == 0 else col2).addWidget(fw)
+
+        grid_l.addLayout(col1); grid_l.addLayout(col2)
+        lay.addWidget(grid_w)
+
+        # ── Benefits ──────────────────────────────────────────────────────────
+        ben_w = QWidget(); ben_w.setStyleSheet("background:transparent;")
+        ben_l = QVBoxLayout(ben_w); ben_l.setSpacing(3); ben_l.setContentsMargins(0, 0, 0, 0)
+        for b in _BENEFITS:
+            brow = QHBoxLayout(); brow.setSpacing(7)
+            chk = QLabel("✓"); chk.setFont(QFont("Segoe UI", 9, QFont.Bold))
+            chk.setStyleSheet("QLabel{color:#E07828;background:transparent;}")
+            chk.setFixedWidth(14)
+            txt = QLabel(b); txt.setFont(QFont("Segoe UI", 9))
+            txt.setStyleSheet("QLabel{color:#A07050;background:transparent;}")
+            brow.addWidget(chk); brow.addWidget(txt); brow.addStretch()
+            ben_l.addLayout(brow)
+        lay.addWidget(ben_w)
+
+        lay.addStretch()
+
+        # ── Plans ─────────────────────────────────────────────────────────────
+        plans_row = QHBoxLayout(); plans_row.setSpacing(10)
+        for name, price, period, highlight in _PLANS:
+            pw = QFrame()
+            if highlight:
+                pw.setStyleSheet(
+                    "QFrame{background:rgba(168,78,8,0.35);"
+                    "border:1px solid #E07828;border-radius:8px;}"
+                )
+            else:
+                pw.setStyleSheet(
+                    "QFrame{background:rgba(22,10,0,0.6);"
+                    "border:1px solid rgba(61,32,8,0.8);border-radius:8px;}"
+                )
+            pl = QVBoxLayout(pw); pl.setSpacing(1); pl.setContentsMargins(12, 8, 12, 8)
+            n_lbl = QLabel(name); n_lbl.setFont(QFont("Segoe UI", 9, QFont.Bold))
+            n_lbl.setStyleSheet(
+                "QLabel{color:#FF9040;background:transparent;}" if highlight
+                else "QLabel{color:#A07050;background:transparent;}"
+            )
+            p_lbl = QLabel(f"R$ {price}"); p_lbl.setFont(QFont("Segoe UI", 14, QFont.Bold))
+            p_lbl.setStyleSheet("QLabel{color:#F5E6D0;background:transparent;}")
+            pr_lbl = QLabel(period); pr_lbl.setFont(QFont("Segoe UI", 8))
+            pr_lbl.setStyleSheet("QLabel{color:#7A5030;background:transparent;}")
+            if highlight:
+                badge = QLabel("★ Mais vantajoso"); badge.setFont(QFont("Segoe UI", 8, QFont.Bold))
+                badge.setStyleSheet("QLabel{color:#E07828;background:transparent;}")
+                pl.addWidget(badge)
+            pl.addWidget(n_lbl); pl.addWidget(p_lbl); pl.addWidget(pr_lbl)
+            plans_row.addWidget(pw, 1)
+        lay.addLayout(plans_row)
+
+    # ── Particle logic ────────────────────────────────────────────────────────
+
+    def _init_particles(self):
+        w, h = self.width(), self.height()
+        self._particles = [{
+            'x':  random.random() * w,
+            'y':  random.random() * h,
+            'r':  random.random() * 1.4 + 0.3,
+            'dx': (random.random() - 0.5) * 0.28,
+            'dy': (random.random() - 0.5) * 0.28,
+            'alpha': random.random() * 0.45 + 0.08,
+        } for _ in range(55)]
+        self._ready = True
+
+    def _step(self):
+        if not self._ready:
+            if self.width() > 0 and self.height() > 0:
+                self._init_particles()
+            return
+        w, h = self.width(), self.height()
+        for p in self._particles:
+            p['x'] += p['dx']; p['y'] += p['dy']
+            if p['x'] < 0 or p['x'] > w:
+                p['dx'] *= -1
+                p['x'] = max(0.0, min(float(w), p['x']))
+            if p['y'] < 0 or p['y'] > h:
+                p['dy'] *= -1
+                p['y'] = max(0.0, min(float(h), p['y']))
+        self.update()
+
+    def resizeEvent(self, event):  # noqa: N802
+        self._bg_grad = None          # invalidate cached gradient
+        super().resizeEvent(event)
+
+    def paintEvent(self, event):  # noqa: N802
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        if self._bg_grad is None:
+            self._bg_grad = QLinearGradient(0, 0, self.width(), self.height())
+            self._bg_grad.setColorAt(0.0, QColor("#0A0600"))
+            self._bg_grad.setColorAt(1.0, QColor("#160A00"))
+        painter.fillRect(self.rect(), self._bg_grad)
+        for p in self._particles:
+            c = QColor(190, 100, 20)
+            c.setAlphaF(max(0.0, min(1.0, p['alpha'])))
+            painter.setBrush(c); painter.setPen(Qt.NoPen)
+            r = p['r']
+            painter.drawEllipse(int(p['x'] - r), int(p['y'] - r),
+                                int(r * 2 + 1), int(r * 2 + 1))
+        painter.end()
+
+
 class LoginWidget(QWidget):
     login_ok = pyqtSignal(int, str, dict)
 
@@ -1356,43 +1565,46 @@ class LoginWidget(QWidget):
         super().__init__(); self._build()
 
     def _build(self):
-        root = QVBoxLayout(self); root.setAlignment(Qt.AlignCenter); root.setContentsMargins(0,0,0,0)
-        center = QWidget(); center.setFixedWidth(380)
-        lay = QVBoxLayout(center); lay.setSpacing(0); lay.setContentsMargins(0,0,0,0)
+        root = QHBoxLayout(self)
+        root.setSpacing(0); root.setContentsMargins(0, 0, 0, 0)
 
-        # Logo — estética da landing page
-        logo_area = QVBoxLayout(); logo_area.setSpacing(8); logo_area.setAlignment(Qt.AlignCenter)
-        mark = QLabel("N"); mark.setFont(QFont("Segoe UI", 14, QFont.Bold))
-        mark.setStyleSheet(
-            f"background: qlineargradient(x1:0,y1:0,x2:1,y2:1,"
-            f"stop:0 {T('ORANGE_DIM')}, stop:1 {T('ORANGE')});"
-            f"color: #fff5ec; border-radius: 12px; padding: 10px 14px;"
-        )
-        mark.setAlignment(Qt.AlignCenter); mark.setFixedSize(56, 56)
+        # ── Left panel: landing-page aesthetics ───────────────────────────────
+        left = _LeftLoginPanel()
+        left.setMinimumWidth(460)
+        root.addWidget(left, 1)
 
-        title = QLabel("NOVAROMA"); title.setFont(QFont("Segoe UI", 18, QFont.Bold))
-        title.setStyleSheet(f"color: {T('ORANGE')}; letter-spacing: 5px; background: transparent;")
-        title.setAlignment(Qt.AlignCenter)
+        # ── Vertical separator ────────────────────────────────────────────────
+        sep = QFrame(); sep.setFrameShape(QFrame.VLine)
+        sep.setStyleSheet(f"color: {T('BORDER')};")
+        root.addWidget(sep)
 
-        sub = QLabel("Sistema de Gestão de Clientes"); sub.setFont(QFont("Segoe UI", 9))
-        sub.setStyleSheet(f"color: {T('TEXT_DIM')}; letter-spacing: 2px; background: transparent;")
+        # ── Right panel: login card ───────────────────────────────────────────
+        right = QWidget()
+        right.setFixedWidth(420)
+        right_l = QVBoxLayout(right)
+        right_l.setAlignment(Qt.AlignCenter); right_l.setContentsMargins(32, 0, 32, 0)
+
+        center = QWidget(); center.setFixedWidth(356)
+        lay = QVBoxLayout(center); lay.setSpacing(0); lay.setContentsMargins(0, 0, 0, 0)
+
+        # Welcome header
+        welcome = QLabel("Bem-vindo de volta")
+        welcome.setFont(QFont("Segoe UI", 13, QFont.Bold))
+        welcome.setStyleSheet(f"color: {T('ORANGE')}; letter-spacing: 2px; background: transparent;")
+        welcome.setAlignment(Qt.AlignCenter)
+        sub = QLabel("Entre na sua conta para continuar")
+        sub.setFont(QFont("Segoe UI", 9))
+        sub.setStyleSheet(f"color: {T('TEXT_DIM')}; letter-spacing: 1px; background: transparent;")
         sub.setAlignment(Qt.AlignCenter)
+        lay.addWidget(welcome); lay.addSpacing(4); lay.addWidget(sub); lay.addSpacing(16)
 
-        # Glow label abaixo do logo
-        glow_line = QFrame()
-        glow_line.setFixedHeight(1)
+        # Glow line
+        glow_line = QFrame(); glow_line.setFixedHeight(1)
         glow_line.setStyleSheet(
             f"background: qlineargradient(x1:0,y1:0,x2:1,y2:0,"
-            f"stop:0 transparent, stop:0.5 {T('ORANGE')}, stop:1 transparent);"
+            f"stop:0 transparent,stop:0.5 {T('ORANGE')},stop:1 transparent);"
         )
-
-        logo_area.addWidget(mark, alignment=Qt.AlignCenter)
-        logo_area.addWidget(title)
-        logo_area.addWidget(sub)
-        lay.addLayout(logo_area)
-        lay.addSpacing(8)
-        lay.addWidget(glow_line)
-        lay.addSpacing(24)
+        lay.addWidget(glow_line); lay.addSpacing(20)
 
         # Card
         c = card()
@@ -1404,7 +1616,7 @@ class LoginWidget(QWidget):
             f"  border-radius: 12px;"
             f"}}"
         )
-        cl = QVBoxLayout(c); cl.setSpacing(12); cl.setContentsMargins(28,24,28,24)
+        cl = QVBoxLayout(c); cl.setSpacing(12); cl.setContentsMargins(28, 24, 28, 24)
 
         cl.addWidget(mono_label("USUÁRIO", 9, T("TEXT_DIM")))
         self.inp_user = QLineEdit(); self.inp_user.setPlaceholderText("Digite seu usuário"); self.inp_user.setFixedHeight(42)
@@ -1441,7 +1653,9 @@ class LoginWidget(QWidget):
         foot = QHBoxLayout(); foot.setAlignment(Qt.AlignCenter)
         foot.addWidget(mono_label("◆ NOVAROMA SOLUTIONS", 8, T("TEXT_DIM")))
         lay.addSpacing(16); lay.addLayout(foot)
-        root.addWidget(center, alignment=Qt.AlignCenter)
+
+        right_l.addWidget(center, alignment=Qt.AlignCenter)
+        root.addWidget(right)
 
     def _login(self):
         user = self.inp_user.text().strip(); senha = self.inp_pass.text()
@@ -2280,7 +2494,7 @@ class MainWindow(QMainWindow):
 class AppController(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("NovaRoma"); self.resize(440, 600)
+        self.setWindowTitle("NovaRoma"); self.resize(900, 640)
         self.stack = QStackedWidget()
         lay = QVBoxLayout(self); lay.setContentsMargins(0,0,0,0); lay.addWidget(self.stack)
         self.login = LoginWidget()
@@ -2301,7 +2515,7 @@ class AppController(QWidget):
         if self.main_win is not None:
             self.main_win.hide(); self.main_win.deleteLater(); self.main_win = None
         self.login.inp_user.clear(); self.login.inp_pass.clear()
-        self.show(); self.resize(440, 600)
+        self.show(); self.resize(900, 640)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
